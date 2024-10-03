@@ -6,17 +6,10 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    def scriptDirExists = fileExists('scripts')
-                    if (scriptDirExists) {
-                        echo "scripts folder found."
-
-                        // List files in the scripts folder using PowerShell
-                        powershell """
-                            Get-ChildItem -Path 'scripts' -Force
-                        """
-                    } else {
-                        error("scripts folder not found!")
-                    }
+                    // List files in the base directory using PowerShell
+                    powershell """
+                        Get-ChildItem -Path '.' -Force
+                    """
                 }
             }
         }
@@ -24,15 +17,38 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    // List the directory contents before searching for files
-                    echo "Listing files in 'scripts' directory..."
+                    // List the directory contents before searching for SQL files
+                    echo "Listing files in the base directory..."
                     powershell """
-                        Get-ChildItem -Path 'scripts' -Force
+                        Get-ChildItem -Path '.' -Force
                     """
 
-                    // Define the directory containing the SQL files (simplified glob pattern)
-                    def scriptFiles = findFiles(glob: 'scripts/*.sql')
-    
+                    // Find SQL files in the base directory
+                    def sqlFiles = findFiles(glob: '*.sql')
+                    
+                    // Output debug information
+                    echo "Found files: " + sqlFiles.collect { it.path }.join(', ')
+
+                    // Check if any SQL files are found
+                    if (sqlFiles.length == 0) {
+                        error("No SQL files found in the base directory.")
+                    } else {
+                        echo "${sqlFiles.length} SQL files found in the base directory."
+
+                        // Validate that SQL files are named with numbers
+                        def invalidFiles = []
+                        sqlFiles.each { file ->
+                            if (!(file.name ==~ /^\d+\.sql$/)) {
+                                invalidFiles.add(file.name)
+                            }
+                        }
+
+                        if (invalidFiles.size() > 0) {
+                            error("The following SQL files are not named with numbers: ${invalidFiles.join(', ')}")
+                        } else {
+                            echo "All SQL files are correctly named with numbers."
+                        }
+                    }
                 }
             }
         }
@@ -45,8 +61,8 @@ pipeline {
                     def username = 'sa' 
                     def password = 'Sa123'
 
-                    def sqlScriptsDir = ""
-                    def sqlFiles = findFiles(glob: "${sqlScriptsDir}/*.sql")
+                    // Find SQL files in the base directory
+                    def sqlFiles = findFiles(glob: '*.sql')
 
                     if (sqlFiles.length == 0) {
                         error("No SQL scripts found for deployment.")
