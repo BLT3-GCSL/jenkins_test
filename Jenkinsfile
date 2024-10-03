@@ -31,7 +31,9 @@ pipeline {
                     def scriptFiles = findFiles(glob: 'scripts/*.sql')
                     
                     // Debug: Output the list of found SQL files
-                    echo "Found SQL files: ${scriptFiles*.name}"
+                    if (scriptFiles) {
+                        echo "Found SQL files: " + scriptFiles.collect { it.name }.join(', ')
+                    }
 
                     // Check if any SQL files are found in the scripts folder
                     if (scriptFiles.length == 0) {
@@ -42,7 +44,7 @@ pipeline {
                         // Validate that SQL files are named with numbers
                         def invalidFiles = []
                         scriptFiles.each { file ->
-                            if (!file.name ==~ /^\d+\.sql$/) {
+                            if (!(file.name ==~ /^\d+\.sql$/)) {
                                 invalidFiles.add(file.name)
                             }
                         }
