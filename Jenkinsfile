@@ -13,8 +13,10 @@ pipeline {
                     if (scriptDirExists) {
                         echo "scripts folder found."
                         
-                        // Debug: List files in the scripts folder to verify
-                        sh "ls -la scripts"
+                        // Debug: List files in the scripts folder using PowerShell
+                        powershell """
+                            Get-ChildItem -Path 'scripts' -Force
+                        """
                     } else {
                         error("scripts folder not found!")
                     }
@@ -74,14 +76,14 @@ pipeline {
                         error("No SQL scripts found for deployment.")
                     }
 
-                    // Loop through each file and run it with sqlcmd
+                    // Loop through each file and run it with sqlcmd using PowerShell
                     sqlFiles.each { file ->
                         def fileName = file.name  // Get the file name from the path
                         echo "Running SQL script: ${fileName}"
 
-                        // Execute SQL script using sqlcmd
-                        sh """
-                            sqlcmd -S ${server} -d ${database} -U ${username} -P ${password} -i ${file.path}
+                        // Execute SQL script using sqlcmd in PowerShell
+                        powershell """
+                            sqlcmd -S ${server} -d ${database} -U ${username} -P ${password} -i '${file.path}'
                         """
                     }
                 }
