@@ -2,13 +2,21 @@ pipeline {
     agent any
 
     stages {
+        stage('Checkout') {
+            steps {
+                // Check out the code from the repository
+                checkout scm
+            }
+        }
+
         stage('Prepare') {
             steps {
-                checkout scm
                 script {
-                    // List files in the base directory using PowerShell
+                    // List files in the scripts directory using PowerShell
+                    echo "Listing files in the scripts directory..."
+                    def scriptsDir = 'scripts'
                     powershell """
-                        Get-ChildItem -Path '.' -Force
+                        Get-ChildItem -Path '${scriptsDir}' -Force
                     """
                 }
             }
@@ -17,23 +25,22 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    // List the directory contents before searching for SQL files
-                    echo "Listing files in the base directory..."
-                    powershell """
-                        Get-ChildItem -Path '.' -Force
-                    """
+                    echo "Checking for SQL files in the 'scripts' directory..."
 
-                    // Find SQL files in the base directory
-                    def sqlFiles = findFiles(glob: '*.sql')
-                    
+                    // Define the path to the scripts folder
+                    def scriptsDir = 'scripts'
+
+                    // Find SQL files in the scripts directory
+                    def sqlFiles = findFiles(glob: "${scriptsDir}/*.sql")
+
                     // Output debug information
                     echo "Found files: " + sqlFiles.collect { it.path }.join(', ')
 
                     // Check if any SQL files are found
                     if (sqlFiles.length == 0) {
-                        error("No SQL files found in the base directory.")
+                        error("No SQL files found in the '${scriptsDir}' directory.")
                     } else {
-                        echo "${sqlFiles.length} SQL files found in the base directory."
+                        echo "${sqlFiles.length} SQL files found in the '${scriptsDir}' directory."
 
                         // Validate that SQL files are named with numbers
                         def invalidFiles = []
@@ -56,13 +63,16 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    def server = 'AJSERVER' 
-                    def database = 'TEST_DB' 
-                    def username = 'sa' 
-                    def password = 'Sa123'
+                    def server = 'AJSERVER' // Your SQL Server address
+                    def database = 'TEST_DB' // Your target database name
+                    def username = 'sa'      // Your SQL Server username
+                    def password = 'Sa123'   // Your SQL Server password
 
-                    // Find SQL files in the base directory
-                    def sqlFiles = findFiles(glob: '*.sql')
+                    // Define the path to the scripts folder
+                    def scriptsDir = 'scripts'
+
+                    // Find SQL files in the scripts directory
+                    def sqlFiles = findFiles(glob: "${scriptsDir}/*.sql")
 
                     if (sqlFiles.length == 0) {
                         error("No SQL scripts found for deployment.")
@@ -72,6 +82,7 @@ pipeline {
                         def fileName = file.name
                         echo "Running SQL script: ${fileName}"
 
+                        // Execute each SQL file using sqlcmd
                         powershell """
                             sqlcmd -S ${server} -d ${database} -U ${username} -P ${password} -i '${file.path}'
                         """
