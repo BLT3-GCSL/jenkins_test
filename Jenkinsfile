@@ -4,16 +4,13 @@ pipeline {
     stages {
         stage('Prepare') {
             steps {
-                // Check out the repository using the SCM
                 checkout scm
-
-                // Check if the 'scripts' folder exists
                 script {
                     def scriptDirExists = fileExists('scripts')
                     if (scriptDirExists) {
                         echo "scripts folder found."
-                        
-                        // Debug: List files in the scripts folder using PowerShell
+
+                        // List files in the scripts folder using PowerShell
                         powershell """
                             Get-ChildItem -Path 'scripts' -Force
                         """
@@ -27,34 +24,35 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    // Debug: Check directory contents before searching for files
+                    // List the directory contents before searching for files
                     echo "Listing files in 'scripts' directory..."
                     powershell """
                         Get-ChildItem -Path 'scripts' -Force
                     """
 
-                    // Define the directory containing the SQL files (case-insensitive)
-                    def scriptFiles = findFiles(glob: 'scripts/(?i)*.sql')
-                    
-                    // Debug: Output the list of found SQL files
-                    if (scriptFiles) {
-                        echo "Found SQL files: " + scriptFiles.collect { it.name }.join(', ')
-                    }
+                    // Use PowerShell to find all `.sql` files
+                    def sqlFiles = powershell(returnStdout: true, script: """
+                        Get-ChildItem -Path 'scripts' -Filter '*.sql' -File | ForEach-Object { $_.FullName }
+                    """).trim().split('\r?\n')
 
-                    // Check if any SQL files are found in the scripts folder
-                    if (scriptFiles.length == 0) {
+                    // Output debug information
+                    echo "Found SQL files: " + sqlFiles.join(', ')
+
+                    // Check if any SQL files are found
+                    if (sqlFiles.length == 0 || (sqlFiles[0] == "")) {
                         error("No SQL files found in the scripts folder.")
                     } else {
-                        echo "${scriptFiles.length} SQL files found in the scripts folder."
-                        
+                        echo "${sqlFiles.length} SQL files found in the scripts folder."
+
                         // Validate that SQL files are named with numbers
                         def invalidFiles = []
-                        scriptFiles.each { file ->
-                            if (!(file.name ==~ /^\d+\.sql$/)) {
-                                invalidFiles.add(file.name)
+                        sqlFiles.each { filePath ->
+                            def fileName = filePath.split(/[\/\\]/).last()
+                            if (!(fileName ==~ /^\d+\.sql$/)) {
+                                invalidFiles.add(fileName)
                             }
                         }
-                        
+
                         if (invalidFiles.size() > 0) {
                             error("The following SQL files are not named with numbers: ${invalidFiles.join(', ')}")
                         } else {
@@ -68,30 +66,26 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Define the SQL Server connection details
-                    def server = 'AJSERVER'
-                    def database = 'TEST_DB'
-                    def username = 'sa'
+                    def server = 'AJSERVER' 
+                    def database = 'TEST_DB' 
+                    def username = 'sa' 
                     def password = 'Sa123'
 
-                    // Define the directory containing the SQL files
                     def sqlScriptsDir = "scripts"
+                    def sqlFiles = powershell(returnStdout: true, script: """
+                        Get-ChildItem -Path 'scripts' -Filter '*.sql' -File | ForEach-Object { $_.FullName }
+                    """).trim().split('\r?\n')
 
-                    // Get a list of SQL files from the scripts directory (case-insensitive)
-                    def sqlFiles = findFiles(glob: "${sqlScriptsDir}/(?i)*.sql")
-
-                    if (sqlFiles.length == 0) {
+                    if (sqlFiles.length == 0 || (sqlFiles[0] == "")) {
                         error("No SQL scripts found for deployment.")
                     }
 
-                    // Loop through each file and run it with sqlcmd using PowerShell
-                    sqlFiles.each { file ->
-                        def fileName = file.name  // Get the file name from the path
+                    sqlFiles.each { filePath ->
+                        def fileName = filePath.split(/[\/\\]/).last()
                         echo "Running SQL script: ${fileName}"
 
-                        // Execute SQL script using sqlcmd in PowerShell
                         powershell """
-                            sqlcmd -S ${server} -d ${database} -U ${username} -P ${password} -i '${file.path}'
+                            sqlcmd -S ${server} -d ${database} -U ${username} -P ${password} -i '${filePath}'
                         """
                     }
                 }
