@@ -30,26 +30,23 @@ pipeline {
                         Get-ChildItem -Path 'scripts' -Force
                     """
 
-                    // Use PowerShell to find all `.sql` files
-                    def sqlFiles = powershell(returnStdout: true, script: """
-                        Get-ChildItem -Path 'scripts' -Filter '*.sql' -File | ForEach-Object { $_.FullName }
-                    """).trim().split('\r?\n')
-
+                    // Define the directory containing the SQL files (simplified glob pattern)
+                    def scriptFiles = findFiles(glob: 'scripts/*.sql')
+                    
                     // Output debug information
-                    echo "Found SQL files: " + sqlFiles.join(', ')
+                    echo "Found files: " + scriptFiles.collect { it.path }.join(', ')
 
                     // Check if any SQL files are found
-                    if (sqlFiles.length == 0 || (sqlFiles[0] == "")) {
+                    if (scriptFiles.length == 0) {
                         error("No SQL files found in the scripts folder.")
                     } else {
-                        echo "${sqlFiles.length} SQL files found in the scripts folder."
+                        echo "${scriptFiles.length} SQL files found in the scripts folder."
 
                         // Validate that SQL files are named with numbers
                         def invalidFiles = []
-                        sqlFiles.each { filePath ->
-                            def fileName = filePath.split(/[\/\\]/).last()
-                            if (!(fileName ==~ /^\d+\.sql$/)) {
-                                invalidFiles.add(fileName)
+                        scriptFiles.each { file ->
+                            if (!(file.name ==~ /^\d+\.sql$/)) {
+                                invalidFiles.add(file.name)
                             }
                         }
 
@@ -72,20 +69,18 @@ pipeline {
                     def password = 'Sa123'
 
                     def sqlScriptsDir = "scripts"
-                    def sqlFiles = powershell(returnStdout: true, script: """
-                        Get-ChildItem -Path 'scripts' -Filter '*.sql' -File | ForEach-Object { $_.FullName }
-                    """).trim().split('\r?\n')
+                    def sqlFiles = findFiles(glob: "${sqlScriptsDir}/*.sql")
 
-                    if (sqlFiles.length == 0 || (sqlFiles[0] == "")) {
+                    if (sqlFiles.length == 0) {
                         error("No SQL scripts found for deployment.")
                     }
 
-                    sqlFiles.each { filePath ->
-                        def fileName = filePath.split(/[\/\\]/).last()
+                    sqlFiles.each { file ->
+                        def fileName = file.name
                         echo "Running SQL script: ${fileName}"
 
                         powershell """
-                            sqlcmd -S ${server} -d ${database} -U ${username} -P ${password} -i '${filePath}'
+                            sqlcmd -S ${server} -d ${database} -U ${username} -P ${password} -i '${file.path}'
                         """
                     }
                 }
