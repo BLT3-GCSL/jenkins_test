@@ -60,13 +60,15 @@ pipeline {
                         def fileName = file.name
                         echo "Running SQL script: ${fileName}"
 
-                        // Execute SQL script and redirect output to log file
+                        // Execute SQL script and capture output
                         def output = powershell(script: """
-                            sqlcmd -S ${server} -d ${database} -U ${username} -P ${password} -i '${file.path}' -b -o '${logFile}'
+                            sqlcmd -S ${server} -d ${database} -U ${username} -P ${password} -i '${file.path}' -b 2>&1
                         """, returnStdout: true).trim()
 
-                        // Append output to log file and check for error messages
+                        // Write output to the log file
                         writeFile(file: logFile, text: output, append: true)
+
+                        // Print output to the console
                         echo output
 
                         // Check for specific error messages
