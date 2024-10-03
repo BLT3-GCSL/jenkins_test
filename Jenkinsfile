@@ -27,8 +27,14 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    // Define the directory containing the SQL files
-                    def scriptFiles = findFiles(glob: 'scripts/*.sql')
+                    // Debug: Check directory contents before searching for files
+                    echo "Listing files in 'scripts' directory..."
+                    powershell """
+                        Get-ChildItem -Path 'scripts' -Force
+                    """
+
+                    // Define the directory containing the SQL files (case-insensitive)
+                    def scriptFiles = findFiles(glob: 'scripts/(?i)*.sql')
                     
                     // Debug: Output the list of found SQL files
                     if (scriptFiles) {
@@ -71,8 +77,8 @@ pipeline {
                     // Define the directory containing the SQL files
                     def sqlScriptsDir = "scripts"
 
-                    // Get a list of SQL files from the scripts directory
-                    def sqlFiles = findFiles(glob: "${sqlScriptsDir}/*.sql")
+                    // Get a list of SQL files from the scripts directory (case-insensitive)
+                    def sqlFiles = findFiles(glob: "${sqlScriptsDir}/(?i)*.sql")
 
                     if (sqlFiles.length == 0) {
                         error("No SQL scripts found for deployment.")
