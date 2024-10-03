@@ -6,7 +6,6 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    // List files in the 'scripts' directory
                     echo "Listing files in the scripts directory..."
                     powershell """
                         Get-ChildItem -Path 'scripts' -Force
@@ -71,7 +70,7 @@ pipeline {
                         // Print output to the console
                         echo output
 
-                        // Check for specific error messages
+                        // Log any SQL error messages
                         if (output.contains("Msg")) {
                             errorMessages.add(output)
                         }
