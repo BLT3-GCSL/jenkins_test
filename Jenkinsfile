@@ -6,12 +6,15 @@ pipeline {
             steps {
                 // Check out the repository using the SCM
                 checkout scm
-                
+
                 // Check if the 'scripts' folder exists
                 script {
                     def scriptDirExists = fileExists('scripts')
                     if (scriptDirExists) {
                         echo "scripts folder found."
+                        
+                        // Debug: List files in the scripts folder to verify
+                        sh "ls -la scripts"
                     } else {
                         error("scripts folder not found!")
                     }
@@ -25,6 +28,9 @@ pipeline {
                     // Define the directory containing the SQL files
                     def scriptFiles = findFiles(glob: 'scripts/*.sql')
                     
+                    // Debug: Output the list of found SQL files
+                    echo "Found SQL files: ${scriptFiles*.name}"
+
                     // Check if any SQL files are found in the scripts folder
                     if (scriptFiles.length == 0) {
                         error("No SQL files found in the scripts folder.")
