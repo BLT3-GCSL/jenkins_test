@@ -1,14 +1,8 @@
 USE TEST_DB
 GO
-
-/****** Object:  Table [dbo].[AssetMaster]    Script Date: 8/22/2024 1:59:00 PM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-CREATE TABLE [dbo].[AssetMaster](
+BEGIN TRY
+    
+	CREATE TABLE [dbo].[AssetMaster](
 	[AssetCode] [nvarchar](15) NOT NULL,
 	[AssetName] [nvarchar](70) NULL,
 	[AssetDescription] [nvarchar](100) NULL,
@@ -21,5 +15,18 @@ CREATE TABLE [dbo].[AssetMaster](
 	[AssetStatus] [bit] NULL,
 	[AssetStatusRemarks] [nvarchar](50) NULL
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+END TRY
+
+BEGIN CATCH
+    DECLARE @ErrorMessage NVARCHAR(MAX)
+    SET @ErrorMessage = ERROR_MESSAGE()
+    
+    -- Log the error message
+    INSERT INTO TEST_DB.dbo.ErrorLog (ErrorMessage) VALUES (@ErrorMessage)
+
+    -- Optionally, rethrow the error or handle it as needed
+    RAISERROR(@ErrorMessage, 16, 1);
+END CATCH
 
 GO
