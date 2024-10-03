@@ -45,7 +45,7 @@ pipeline {
                     def username = 'sa' 
                     def password = 'Sa123'
 
-                    def sqlScriptsDir = "scripts"
+                    def sqlScriptsDir = ""
                     def sqlFiles = findFiles(glob: "${sqlScriptsDir}/*.sql")
 
                     if (sqlFiles.length == 0) {
